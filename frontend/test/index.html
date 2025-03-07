@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Learn2Aid - Prediction App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+
+      .container {
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      button {
+        padding: 10px 15px;
+        margin: 5px 0;
+        cursor: pointer;
+        background-color: #4285f4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background-color: #3367d6;
+      }
+
+      #logout {
+        background-color: #db4437;
+      }
+
+      #logout:hover {
+        background-color: #c31c0d;
+      }
+
+      pre {
+        background-color: #f0f0f0;
+        padding: 15px;
+        border-radius: 5px;
+        overflow: auto;
+        margin-top: 20px;
+      }
+
+      .user-info {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        display: none;
+      }
+
+      .user-photo {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        margin-right: 10px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .input-group {
+        margin: 20px 0;
+        display: flex;
+        gap: 10px;
+      }
+
+      input {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        flex-grow: 1;
+      }
+
+      #predict-btn {
+        background-color: #0f9d58;
+      }
+
+      #predict-btn:hover {
+        background-color: #0b8043;
+      }
+
+      .heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="heading">
+        <h1>Learn2Aid</h1>
+        <div id="auth-buttons">
+          <button id="login-google">Login with Google</button>
+          <button id="logout" class="hidden">Logout</button>
+        </div>
+      </div>
+
+      <div id="user-info" class="user-info">
+        <div style="display: flex; align-items: center">
+          <img id="user-photo" class="user-photo" src="" alt="User Photo" />
+          <div>
+            <p><strong id="user-name"></strong></p>
+            <p><small id="user-email"></small></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="prediction-form" class="hidden">
+        <h3>AI Prediction</h3>
+        <div class="input-group">
+          <input
+            type="number"
+            id="input-value"
+            placeholder="Enter a number..."
+            value="5"
+          />
+          <button id="predict-btn">Predict</button>
+        </div>
+
+        <h4>Result:</h4>
+        <pre id="api-response">Enter a value and click Predict</pre>
+      </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+      // Import Firebase modules
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import {
+        getAuth,
+        signInWithPopup,
+        GoogleAuthProvider,
+        onAuthStateChanged,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+      // Your Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyB9Cl_caDnMbkDdtRd7oGlFB11C0wFh7FE",
+        authDomain: "learn2aid.firebaseapp.com",
+        projectId: "learn2aid",
+        storageBucket: "learn2aid.appspot.com",
+        messagingSenderId: "720302589716",
+        appId: "1:720302589716:web:bcd5400adc8d41aa73e401",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const provider = new GoogleAuthProvider();
+
+      // DOM Elements
+      const loginGoogleBtn = document.getElementById("login-google");
+      const logoutBtn = document.getElementById("logout");
+      const userInfo = document.getElementById("user-info");
+      const userPhoto = document.getElementById("user-photo");
+      const userName = document.getElementById("user-name");
+      const userEmail = document.getElementById("user-email");
+      const predictionForm = document.getElementById("prediction-form");
+      const inputValue = document.getElementById("input-value");
+      const predictBtn = document.getElementById("predict-btn");
+      const apiResponse = document.getElementById("api-response");
+
+      // Backend API URL
+      const API_BASE_URL = "http://localhost:8080";
+
+      // Login with Google
+      loginGoogleBtn.addEventListener("click", async () => {
+        try {
+          console.log("Starting Google sign-in process...");
+          const result = await signInWithPopup(auth, provider);
+          console.log("Sign-in successful", result);
+        } catch (error) {
+          console.error("Error signing in:", error);
+          apiResponse.textContent = JSON.stringify(
+            {
+              code: error.code,
+              message: error.message,
+              additionalData: error.customData
+                ? error.customData.toJSON()
+                : null,
+            },
+            null,
+            2
+          );
+        }
+      });
+
+      // Logout
+      logoutBtn.addEventListener("click", async () => {
+        try {
+          await signOut(auth);
+          apiResponse.textContent = "Enter a value and click Predict";
+        } catch (error) {
+          console.error("Error signing out:", error);
+        }
+      });
+
+      // Make prediction
+      predictBtn.addEventListener("click", async () => {
+        try {
+          const value = parseFloat(inputValue.value);
+
+          if (isNaN(value)) {
+            apiResponse.textContent = "Please enter a valid number";
+            return;
+          }
+
+          apiResponse.textContent = "Loading...";
+
+          const token = await auth.currentUser.getIdToken();
+          const response = await fetch(`${API_BASE_URL}/api/v1/predict`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ x: value }),
+          });
+
+          // Check if we need to refresh the token
+          if (response.headers.get("X-Refresh-Token") === "true") {
+            console.log("Token is about to expire, refreshing...");
+            await auth.currentUser.getIdToken(true);
+          }
+
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          apiResponse.textContent = `Prediction result: ${
+            data.prediction
+          }\n\nFull response:\n${JSON.stringify(data, null, 2)}`;
+        } catch (error) {
+          apiResponse.textContent = `Error: ${error.message}`;
+          console.error("Prediction error:", error);
+        }
+      });
+
+      // Monitor auth state changes
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          // User is signed in
+          console.log("User is signed in:", user);
+          loginGoogleBtn.classList.add("hidden");
+          logoutBtn.classList.remove("hidden");
+          predictionForm.classList.remove("hidden");
+          userInfo.style.display = "block";
+
+          // Display user info
+          userName.textContent = user.displayName;
+          userEmail.textContent = user.email;
+          if (user.photoURL) {
+            userPhoto.src = user.photoURL;
+          } else {
+            userPhoto.src = "https://via.placeholder.com/50";
+          }
+        } else {
+          // User is signed out
+          console.log("User is signed out");
+          loginGoogleBtn.classList.remove("hidden");
+          logoutBtn.classList.add("hidden");
+          predictionForm.classList.add("hidden");
+          userInfo.style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>

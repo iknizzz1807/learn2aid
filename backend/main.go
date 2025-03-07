@@ -1,53 +1,47 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-resty/resty/v2"
+	"github.com/iknizzz1807/learn2aid/api"
+	"github.com/iknizzz1807/learn2aid/config"
+	"github.com/iknizzz1807/learn2aid/services"
 )
 
-type InputData struct {
-	X float64 `json:"x"`
-}
-
-type PredictionResponse struct {
-	Prediction float64 `json:"prediction"`
-}
-
 func main() {
-	r := gin.Default()
+	// Set Gin mode based on environment
+	mode := os.Getenv("GIN_MODE")
+	if mode == "" {
+		mode = "debug" // Default to debug mode
+	}
+	gin.SetMode(mode)
 
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Hello from learn2aid!"})
-	})
+	// Initialize configuration
+	cfg := config.NewConfig()
 
-	r.POST("/predict", func(c *gin.Context) {
-		var input InputData
-		if err := c.ShouldBindJSON(&input); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-			return
-		}
+	// Initialize services
+	firebaseService := services.NewFirebaseService(cfg.FirebaseApp)
+	aiService := services.NewAIService(cfg.AIServiceURL)
 
-		client := resty.New()
-		var response PredictionResponse
-		_, err := client.R().
-			SetHeader("Content-Type", "application/json").
-			SetBody(input).
-			SetResult(&response).
-			Post("http://ai-service:8000/predict")
+	// Check AI service health
+	log.Println("Checking AI service health...")
+	if err := aiService.HealthCheck(); err != nil {
+		log.Printf("Warning: AI service health check failed: %v", err)
+	} else {
+		log.Println("AI service is healthy")
+	}
 
-		if err != nil {
-			log.Println("Error calling AI service:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "AI service unavailable"})
-			return
-		}
+	// Setup router with all the routes
+	r := api.SetupRouter(aiService, firebaseService)
 
-		c.JSON(http.StatusOK, gin.H{"prediction": response.Prediction})
-	})
+	// Get port from environment or use default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default port
+	}
 
-	fmt.Println("Go backend running on http://localhost:8080")
-	r.Run(":8080")
+	log.Printf("Starting server on port %s in %s mode", port, mode)
+	r.Run(":" + port)
 }
