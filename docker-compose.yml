@@ -1,0 +1,52 @@
+# Production
+# services:
+#   go-backend:
+#     build: ./backend
+#     ports:
+#       - "8080:8080"
+#     depends_on:
+#       - ai-service
+#     networks:
+#       - internal-network
+
+#   ai-service:
+#     build: ./ai_service
+#     expose:
+#       - "8000"
+#     networks:
+#       - internal-network
+
+# networks:
+#   internal-network:
+#     driver: bridge
+
+# Development
+services:
+  go-backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - ai-service
+    volumes:
+      - ./backend:/app
+    command: ["go", "run", "."]
+    environment:
+      - GO_ENV=development
+    networks:
+      - internal-network
+
+  ai-service:
+    build: ./ai_service
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai_service:/app
+    networks:
+      - internal-network
+
+networks:
+  internal-network:
+    driver: bridge
