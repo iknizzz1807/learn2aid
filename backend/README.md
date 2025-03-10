@@ -8,6 +8,7 @@ go get -u github.com/go-resty/resty/v2
 go get firebase.google.com/go/v4
 go get google.golang.org/api/option
 go get go.opentelemetry.io/otel/internal/global@v1.34.0
+go get cloud.google.com/go/firestore
 
 ```
 
