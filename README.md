@@ -5,6 +5,12 @@
 
 #### Docker Compose với Volume Mapping cho Development
 
+0. **Kéo image từ Docker Hub xuống**
+
+```bash
+docker compose pull
+```
+
 1. **Khởi động lần đầu tiên hoặc thêm thư viện vào requirements.txt trong ai service**:
 
 ```bash
