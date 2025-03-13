@@ -60,6 +60,7 @@ func NewFirebaseService(app *firebase.App) *FirebaseService {
 }
 
 // VerifyToken validates a Firebase ID token
+// Hàm này được sử dụng trong auth middleware
 func (fs *FirebaseService) VerifyToken(idToken string) (*auth.Token, error) {
 	ctx := context.Background()
 	token, err := fs.AuthClient.VerifyIDToken(ctx, idToken)

@@ -23,8 +23,8 @@
 # Development
 services:
   go-backend:
-    # build: ./backend
-    image: mythong1807/learn2aid-go-backend:latest
+    build: ./backend
+    # image: mythong1807/learn2aid-go-backend:latest
     ports:
       - "8080:8080"
     depends_on:
@@ -38,8 +38,8 @@ services:
       - internal-network
 
   ai-service:
-    # build: ./ai_service
-    image: mythong1807/learn2aid-ai-service:latest
+    build: ./ai_service
+    # image: mythong1807/learn2aid-ai-service:latest
     expose:
       - "8000"
     ports:

@@ -96,6 +96,8 @@ func AuthMiddleware(fbService *services.FirebaseService, config ...AuthConfig) g
 		c.Set("authenticated", true)
 		c.Set("userID", token.UID)
 		c.Set("userEmail", token.Claims["email"])
+		c.Set("userName", token.Claims["name"])
+		c.Set("pictureUrl", token.Claims["picture"])
 
 		// If token is about to expire, add refresh header
 		if tokenAboutToExpire {
