@@ -1,20 +1,63 @@
-import numpy as np
-from sklearn.linear_model import LinearRegression
+from google import genai
+import json
+import time
 
 
-class LinearRegressionModel:
-    def __init__(self):
-        self.model = LinearRegression()
-        self._train_model()
+class GeminiModel:
+    def __init__(self, api_key="AIzaSyAn09nmpcku6PUyhRx8rXNU8YMscYYp1vY"):
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = "gemini-1.5-pro"
 
-    def _train_model(self):
-        x_train = np.array([[1], [2], [3], [4], [5]])
-        y_train = np.array([2, 4, 6, 8, 10])
-        self.model.fit(x_train, y_train)
+    def predict(self, video_file, movement_name="exercise"):
+        """
+        Process video with Gemini API and return assessment
+        """
+        try:
+            # Upload file to Gemini
+            uploaded_file = self.client.files.upload(file=video_file)
 
-    def predict(self, x):
-        x_input = np.array([[x]])
-        return self.model.predict(x_input)[0]
+            # Wait for processing
+            gemini_file = self.client.files.get(name=uploaded_file.name)
+            while gemini_file.state.name == "PROCESSING":
+                time.sleep(1)
+                gemini_file = self.client.files.get(name=gemini_file.name)
+
+            if gemini_file.state.name == "FAILED":
+                return {
+                    "error": "Video processing failed",
+                    "details": gemini_file.state.name,
+                }
+
+            # Generate content with Gemini
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=[
+                    gemini_file,
+                    f"""
+                    This video is about {movement_name} movement, rate this video point out of 100, ?/100
+                    Comment on this movement.
+                    IMPORTANT: Respond ONLY in JSON format like this example:
+                    {{
+                        "point": 85,
+                        "comment": "The movement is very good!"
+                    }}
+                    """,
+                ],
+            )
+
+            # Parse the response
+            json_text = response.text.strip()
+            if json_text.startswith("```json"):
+                json_text = json_text[7:]
+            if json_text.endswith("```"):
+                json_text = json_text[:-3]
+
+            json_data = json.loads(json_text.strip())
+            return json_data
+
+        except Exception as e:
+            return {"error": str(e)}
 
 
-model = LinearRegressionModel()
+# Initialize model
+model = GeminiModel()
