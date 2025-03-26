@@ -383,7 +383,8 @@
 
           // Set feedback text
           feedbackElement.textContent =
-            result.comment || "No feedback provided";
+            "Comment: " + result.comment + "Detail: " + result.detail ||
+            "No feedback provided";
 
           // Set tips
           tipsList.innerHTML = "";

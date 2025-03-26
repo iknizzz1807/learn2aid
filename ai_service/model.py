@@ -4,7 +4,7 @@ import time
 
 
 class GeminiModel:
-    def __init__(self, api_key="AIzaSyAn09nmpcku6PUyhRx8rXNU8YMscYYp1vY"):
+    def __init__(self, api_key="????????????????????????????"):
         self.client = genai.Client(api_key=api_key)
         self.model_name = "gemini-1.5-pro"
 
@@ -35,11 +35,13 @@ class GeminiModel:
                     gemini_file,
                     f"""
                     This video is about {movement_name} movement, rate this video point out of 100, ?/100
-                    Comment on this movement.
+                    "Comment" on this movement. Comment is in general about the movement,
+                    "Detail" is rating in detailed about the good and bad part of the movement things to improve why the score is ?/100 
                     IMPORTANT: Respond ONLY in JSON format like this example:
                     {{
                         "point": 85,
-                        "comment": "The movement is very good!"
+                        "comment": "The movement is very good!",
+                        "detail": "Detailed stuffs"
                     }}
                     """,
                 ],
