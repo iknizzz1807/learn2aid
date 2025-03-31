@@ -1,11 +1,13 @@
 from google import genai
 import json
 import time
+import os
 
 
 class GeminiModel:
-    def __init__(self, api_key="????????????????????????????"):
-        self.client = genai.Client(api_key=api_key)
+    def __init__(self, api_key=None):
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
+        self.client = genai.Client(api_key=self.api_key)
         self.model_name = "gemini-1.5-pro"
 
     def predict(self, video_file, movement_name="exercise"):
