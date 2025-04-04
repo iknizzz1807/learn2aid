@@ -12,5 +12,5 @@ pip install -r requirements.txt
 - Chạy service riêng lẻ bằng lệnh sau:
 
 ```bash
-python ./ai_service/main.py
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
