@@ -3,407 +3,397 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Learn2Aid AI Service Test</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+    <title>Learn2Aid Movement Test</title>
     <style>
       body {
-        padding: 30px;
-        max-width: 800px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 1000px;
         margin: 0 auto;
-        font-family: Arial, sans-serif;
+        padding: 20px;
+        background-color: #f5f5f5;
       }
 
-      .upload-area {
-        border: 2px dashed #ccc;
+      h1 {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+      }
+
+      .container {
+        background-color: white;
         border-radius: 8px;
         padding: 30px;
-        text-align: center;
-        margin-bottom: 20px;
-        transition: all 0.3s;
-        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       }
 
-      .upload-area:hover,
-      .upload-area.dragover {
-        background-color: #f8f9fa;
-        border-color: #0d6efd;
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      select,
+      input[type="file"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+      }
+
+      button {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        width: 100%;
+        transition: background-color 0.3s;
+      }
+
+      button:hover {
+        background-color: #2980b9;
+      }
+
+      button:disabled {
+        background-color: #bdc3c7;
+        cursor: not-allowed;
       }
 
       .results {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 20px;
-        margin-top: 20px;
+        margin-top: 30px;
+        display: none;
       }
 
-      .score-display {
-        font-size: 24px;
-        font-weight: bold;
+      .results.visible {
+        display: block;
+      }
+
+      .score {
+        font-size: 36px;
+        color: #27ae60;
         text-align: center;
         margin: 20px 0;
+        font-weight: bold;
       }
 
-      .progress {
-        height: 25px;
+      .error {
+        color: #e74c3c;
+        font-weight: 600;
+        margin: 20px 0;
+        background-color: #fadbd8;
+        padding: 15px;
+        border-radius: 4px;
+        display: none;
+      }
+
+      .breakdown,
+      .strengths,
+      .improvements {
         margin-bottom: 20px;
       }
 
-      .progress-bar {
-        line-height: 25px;
-        font-size: 14px;
+      h3 {
+        color: #2c3e50;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 8px;
+        margin-top: 25px;
       }
 
-      .hidden {
+      ul {
+        padding-left: 20px;
+      }
+
+      li {
+        margin-bottom: 8px;
+      }
+
+      .loading {
+        text-align: center;
         display: none;
+      }
+
+      .spinner {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1.5s linear infinite;
+        margin: 20px auto;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .breakdown-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+      }
+
+      .breakdown-table th,
+      .breakdown-table td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+
+      .breakdown-table th {
+        background-color: #f5f5f5;
+        font-weight: 600;
       }
 
       .video-preview {
         max-width: 100%;
-        height: auto;
-        border-radius: 8px;
-        margin: 15px 0;
-      }
-
-      .tips-list {
         margin-top: 15px;
+        border-radius: 4px;
       }
 
-      .loading-spinner {
-        display: flex;
-        justify-content: center;
-        margin: 30px 0;
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #7f8c8d;
+        font-size: 14px;
       }
     </style>
   </head>
   <body>
+    <h1>Learn2Aid Movement Analysis</h1>
+
     <div class="container">
-      <h1 class="mb-4">Learn2Aid AI Movement Assessment</h1>
-      <p class="lead">
-        Upload a video of a first aid movement to receive AI feedback
-      </p>
-
-      <div class="card mb-4">
-        <div class="card-body">
-          <div id="upload-area" class="upload-area">
-            <div id="upload-prompt">
-              <i class="bi bi-cloud-upload" style="font-size: 48px"></i>
-              <p>Drag and drop your video file here, or click to select</p>
-              <input
-                type="file"
-                id="video-input"
-                accept="video/*"
-                class="hidden"
-              />
-              <button id="select-video" class="btn btn-primary">
-                Select Video
-              </button>
-            </div>
-
-            <div id="video-info" class="hidden">
-              <video id="video-preview" class="video-preview" controls></video>
-              <p id="file-name" class="mb-2"></p>
-              <button
-                id="change-video"
-                class="btn btn-outline-secondary btn-sm"
-              >
-                Change Video
-              </button>
-            </div>
-          </div>
-
-          <div class="mt-3">
-            <div class="mb-3">
-              <label for="movement-type" class="form-label"
-                >Movement Type:</label
-              >
-              <select id="movement-type" class="form-select">
-                <option value="cpr">CPR Technique</option>
-                <option value="recovery_position">Recovery Position</option>
-                <option value="bandaging">Bandaging Technique</option>
-                <option value="heimlich">Heimlich Maneuver</option>
-                <option value="splinting">Splinting</option>
-              </select>
-            </div>
-
-            <div class="d-grid">
-              <button
-                id="analyze-button"
-                class="btn btn-success btn-lg"
-                disabled
-              >
-                Analyze Movement
-              </button>
-            </div>
-          </div>
-
-          <div id="upload-progress" class="progress mt-3 hidden">
-            <div
-              class="progress-bar progress-bar-striped progress-bar-animated"
-              role="progressbar"
-              style="width: 100%"
-            >
-              Processing video...
-            </div>
-          </div>
-        </div>
+      <div class="form-group">
+        <label for="movement-select">Select Movement Type:</label>
+        <select id="movement-select">
+          <option value="loading">Loading available movements...</option>
+        </select>
       </div>
 
-      <div id="results-container" class="results hidden">
-        <h3 class="mb-3">Assessment Results</h3>
-
-        <div class="score-display">Score: <span id="score">0</span>/100</div>
-
-        <div class="progress">
-          <div
-            id="score-bar"
-            class="progress-bar"
-            role="progressbar"
-            style="width: 0%"
-            aria-valuenow="0"
-            aria-valuemin="0"
-            aria-valuemax="100"
-          ></div>
-        </div>
-
-        <div class="mb-3">
-          <h5>Feedback:</h5>
-          <p id="feedback" class="p-3 bg-light rounded"></p>
-        </div>
-
-        <div id="tips-container">
-          <h5>Improvement Tips:</h5>
-          <ul id="tips-list" class="tips-list"></ul>
-        </div>
+      <div class="form-group">
+        <label for="video-upload">Upload Video:</label>
+        <input type="file" id="video-upload" accept="video/*" />
+        <video id="video-preview" class="video-preview" controls></video>
       </div>
 
-      <div id="error-container" class="alert alert-danger mt-3 hidden"></div>
+      <button id="analyze-btn" disabled>Analyze Movement</button>
+
+      <div class="loading" id="loading">
+        <p>Analyzing your movement. This may take a minute...</p>
+        <div class="spinner"></div>
+      </div>
+
+      <div class="error" id="error"></div>
+
+      <div class="results" id="results">
+        <h2>Analysis Results</h2>
+        <div class="score" id="score"></div>
+
+        <h3>Score Breakdown</h3>
+        <div class="breakdown" id="breakdown">
+          <table class="breakdown-table" id="breakdown-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Score</th>
+              </tr>
+            </thead>
+            <tbody id="breakdown-body"></tbody>
+          </table>
+        </div>
+
+        <h3>Strengths</h3>
+        <div class="strengths" id="strengths">
+          <ul id="strengths-list"></ul>
+        </div>
+
+        <h3>Areas for Improvement</h3>
+        <div class="improvements" id="improvements">
+          <ul id="improvements-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      © 2025 Learn2Aid - AI-Powered First Aid Movement Analysis
     </div>
 
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        // Get DOM elements
-        const uploadArea = document.getElementById("upload-area");
-        const videoInput = document.getElementById("video-input");
-        const selectVideoBtn = document.getElementById("select-video");
+      document.addEventListener("DOMContentLoaded", function () {
+        // API endpoints
+        const BASE_URL = "https://learn2aid-ai-service.onrender.com";
+        const MOVEMENTS_URL = `${BASE_URL}/supported-movements`;
+        const PREDICT_URL = `${BASE_URL}/predict`;
+
+        // Elements
+        const movementSelect = document.getElementById("movement-select");
+        const videoUpload = document.getElementById("video-upload");
         const videoPreview = document.getElementById("video-preview");
-        const videoInfo = document.getElementById("video-info");
-        const uploadPrompt = document.getElementById("upload-prompt");
-        const fileName = document.getElementById("file-name");
-        const changeVideoBtn = document.getElementById("change-video");
-        const analyzeBtn = document.getElementById("analyze-button");
-        const movementType = document.getElementById("movement-type");
-        const uploadProgress = document.getElementById("upload-progress");
-        const resultsContainer = document.getElementById("results-container");
-        const errorContainer = document.getElementById("error-container");
-        const scoreElement = document.getElementById("score");
-        const scoreBar = document.getElementById("score-bar");
-        const feedbackElement = document.getElementById("feedback");
-        const tipsList = document.getElementById("tips-list");
+        const analyzeBtn = document.getElementById("analyze-btn");
+        const loading = document.getElementById("loading");
+        const error = document.getElementById("error");
+        const results = document.getElementById("results");
+        const score = document.getElementById("score");
+        const breakdownBody = document.getElementById("breakdown-body");
+        const strengthsList = document.getElementById("strengths-list");
+        const improvementsList = document.getElementById("improvements-list");
 
-        // Stored video file
-        let selectedFile = null;
-
-        // Set up drag and drop
-        ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
-          uploadArea.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-
-        ["dragenter", "dragover"].forEach((eventName) => {
-          uploadArea.addEventListener(
-            eventName,
-            () => {
-              uploadArea.classList.add("dragover");
-            },
-            false
-          );
-        });
-
-        ["dragleave", "drop"].forEach((eventName) => {
-          uploadArea.addEventListener(
-            eventName,
-            () => {
-              uploadArea.classList.remove("dragover");
-            },
-            false
-          );
-        });
-
-        uploadArea.addEventListener("drop", (e) => {
-          const dt = e.dataTransfer;
-          const files = dt.files;
-
-          if (files.length === 1 && files[0].type.startsWith("video/")) {
-            handleVideoFile(files[0]);
-          } else {
-            showError("Please drop a valid video file.");
-          }
-        });
-
-        // Click to select file
-        selectVideoBtn.addEventListener("click", () => {
-          videoInput.click();
-        });
-
-        videoInput.addEventListener("change", (e) => {
-          if (e.target.files.length === 1) {
-            handleVideoFile(e.target.files[0]);
-          }
-        });
-
-        // Change video button
-        changeVideoBtn.addEventListener("click", () => {
-          resetUI();
-        });
-
-        // Analyze button
-        analyzeBtn.addEventListener("click", async () => {
-          if (!selectedFile) {
-            showError("Please select a video file first.");
-            return;
-          }
-
-          // Show progress and hide results/errors
-          uploadProgress.classList.remove("hidden");
-          resultsContainer.classList.add("hidden");
-          errorContainer.classList.add("hidden");
-          analyzeBtn.disabled = true;
-
-          try {
-            const formData = new FormData();
-            formData.append("file", selectedFile);
-            formData.append("movement_name", movementType.value);
-
-            // Call the API
-            const response = await fetch("http://localhost:8000/predict", {
-              method: "POST",
-              body: formData,
+        // Fetch supported movements
+        fetch(MOVEMENTS_URL)
+          .then((response) => response.json())
+          .then((data) => {
+            movementSelect.innerHTML = "";
+            data.supported_movements.forEach((movement) => {
+              const option = document.createElement("option");
+              option.value = movement;
+              option.textContent =
+                movement.charAt(0).toUpperCase() + movement.slice(1);
+              movementSelect.appendChild(option);
             });
+          })
+          .catch((err) => {
+            console.error("Error fetching movements:", err);
+            movementSelect.innerHTML =
+              '<option value="">Error loading movements</option>';
+          });
 
-            if (!response.ok) {
-              throw new Error(`Server error: ${response.status}`);
-            }
+        // Preview uploaded video
+        videoUpload.addEventListener("change", function (e) {
+          if (this.files && this.files[0]) {
+            videoPreview.src = URL.createObjectURL(this.files[0]);
+            videoPreview.style.display = "block";
 
-            const result = await response.json();
-            displayResults(result);
-          } catch (error) {
-            console.error("Error:", error);
-            showError(`Error processing video: ${error.message}`);
-          } finally {
-            uploadProgress.classList.add("hidden");
+            // Enable the analyze button if a file is selected
             analyzeBtn.disabled = false;
           }
         });
 
-        // Handle the selected video file
-        function handleVideoFile(file) {
-          if (!file.type.startsWith("video/")) {
-            showError("Please select a valid video file.");
+        // Analyze button click
+        analyzeBtn.addEventListener("click", function () {
+          if (!videoUpload.files || !videoUpload.files[0]) {
+            showError("Please select a video file to analyze");
             return;
           }
 
-          selectedFile = file;
+          const formData = new FormData();
+          formData.append("file", videoUpload.files[0]);
+          formData.append("movement_name", movementSelect.value);
 
-          // Update UI
-          uploadPrompt.classList.add("hidden");
-          videoInfo.classList.remove("hidden");
-          fileName.textContent = `File: ${file.name} (${formatFileSize(
-            file.size
-          )})`;
-
-          // Set video preview
-          const videoURL = URL.createObjectURL(file);
-          videoPreview.src = videoURL;
-
-          // Enable analyze button
-          analyzeBtn.disabled = false;
-
-          // Hide any previous results or errors
-          resultsContainer.classList.add("hidden");
-          errorContainer.classList.add("hidden");
-        }
-
-        // Format file size
-        function formatFileSize(bytes) {
-          if (bytes < 1024) return bytes + " bytes";
-          else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-          else if (bytes < 1073741824)
-            return (bytes / 1048576).toFixed(1) + " MB";
-          else return (bytes / 1073741824).toFixed(1) + " GB";
-        }
-
-        // Reset UI
-        function resetUI() {
-          uploadPrompt.classList.remove("hidden");
-          videoInfo.classList.add("hidden");
-          videoPreview.src = "";
-          fileName.textContent = "";
-          selectedFile = null;
+          // Reset UI
+          hideError();
+          results.classList.remove("visible");
+          loading.style.display = "block";
           analyzeBtn.disabled = true;
-          videoInput.value = "";
+
+          // Send request to API
+          fetch(PREDICT_URL, {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => {
+              if (!response.ok) {
+                return response.json().then((data) => {
+                  throw new Error(data.error || "Server error occurred");
+                });
+              }
+              return response.json();
+            })
+            .then((data) => {
+              displayResults(data);
+            })
+            .catch((err) => {
+              showError("Error analyzing video: " + err.message);
+            })
+            .finally(() => {
+              loading.style.display = "none";
+              analyzeBtn.disabled = false;
+            });
+        });
+
+        // Display results
+        function displayResults(data) {
+          if (data.error) {
+            showError(data.error);
+            return;
+          }
+
+          // Display total score
+          score.textContent = `${data.total_point}/100`;
+
+          // Display score breakdown
+          breakdownBody.innerHTML = "";
+          const scoreBreakdown = data.detailed_summary?.score_breakdown || {};
+          Object.entries(scoreBreakdown).forEach(([category, value]) => {
+            const row = document.createElement("tr");
+
+            const categoryCell = document.createElement("td");
+            categoryCell.textContent = formatCategoryName(category);
+
+            const valueCell = document.createElement("td");
+            valueCell.textContent = value;
+
+            row.appendChild(categoryCell);
+            row.appendChild(valueCell);
+            breakdownBody.appendChild(row);
+          });
+
+          // Display strengths
+          strengthsList.innerHTML = "";
+          const strengths = data.detailed_summary?.strengths || [];
+          strengths.forEach((strength) => {
+            const li = document.createElement("li");
+            li.textContent = strength;
+            strengthsList.appendChild(li);
+          });
+
+          // Display improvements
+          improvementsList.innerHTML = "";
+          const improvements =
+            data.detailed_summary?.areas_for_improvement || [];
+          improvements.forEach((improvement) => {
+            const li = document.createElement("li");
+            li.textContent = improvement;
+            improvementsList.appendChild(li);
+          });
+
+          // Show results
+          results.classList.add("visible");
+        }
+
+        // Helper function to format category names
+        function formatCategoryName(category) {
+          return category
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
         }
 
         // Show error message
         function showError(message) {
-          errorContainer.textContent = message;
-          errorContainer.classList.remove("hidden");
-          resultsContainer.classList.add("hidden");
+          error.textContent = message;
+          error.style.display = "block";
         }
 
-        // Display results
-        function displayResults(result) {
-          if (result.error) {
-            showError(result.error);
-            return;
-          }
-
-          // Update score
-          const score = result.point || 0;
-          scoreElement.textContent = score;
-          scoreBar.style.width = `${score}%`;
-          scoreBar.setAttribute("aria-valuenow", score);
-
-          // Set color based on score
-          if (score >= 80) {
-            scoreBar.className = "progress-bar bg-success";
-          } else if (score >= 60) {
-            scoreBar.className = "progress-bar bg-info";
-          } else if (score >= 40) {
-            scoreBar.className = "progress-bar bg-warning";
-          } else {
-            scoreBar.className = "progress-bar bg-danger";
-          }
-
-          // Set feedback text
-          feedbackElement.textContent =
-            "Comment: " + result.comment + "Detail: " + result.detail ||
-            "No feedback provided";
-
-          // Set tips
-          tipsList.innerHTML = "";
-          if (result.tips && Array.isArray(result.tips)) {
-            result.tips.forEach((tip) => {
-              const li = document.createElement("li");
-              li.textContent = tip;
-              tipsList.appendChild(li);
-            });
-            document
-              .getElementById("tips-container")
-              .classList.remove("hidden");
-          } else {
-            document.getElementById("tips-container").classList.add("hidden");
-          }
-
-          // Show results
-          resultsContainer.classList.remove("hidden");
-          errorContainer.classList.add("hidden");
+        // Hide error message
+        function hideError() {
+          error.style.display = "none";
         }
       });
     </script>
