@@ -10,7 +10,7 @@ class GeminiModel:
             api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("API_KEY")
         )
         self.client = genai.Client(api_key=self.api_key)
-        self.model_name = "gemini-2.5-pro-exp-03-25"
+        self.model_name = "gemini-1.5-flash-002"
 
         # Định nghĩa các prompts theo loại movement
         self.movement_prompts = {
@@ -263,9 +263,9 @@ class GeminiModel:
 
             # Generate content with Gemini
             model = (
-                "gemini-2.5-pro-exp-03-25"
+                "gemini-1.5-flash-002"
                 if movement_type == "default"
-                else "gemini-2.5-pro-exp-03-25"
+                else "gemini-1.5-flash-002"
             )
             response = self.client.models.generate_content(
                 model=model,
