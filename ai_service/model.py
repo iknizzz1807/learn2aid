@@ -12,188 +12,236 @@ class GeminiModel:
         self.client = genai.Client(api_key=self.api_key)
         self.model_name = "gemini-1.5-flash-002"
 
-        # Định nghĩa các prompts theo loại movement
+        # Define prompts for different movement types
         self.movement_prompts = {
             "cpr": """
-            Đây là video thực hiện động tác {movement_name}, đưa ra tổng điểm ?/100.
-            Phân tích Chain of Thought (Yêu cầu thực hiện trước khi xuất JSON):
-            Hãy trình bày quá trình suy luận của bạn theo từng bước, tương ứng với các tiêu chí đánh giá dưới đây. Với mỗi tiêu chí:
-            1.  Mô tả ngắn gọn hành động quan sát được trong video liên quan đến tiêu chí đó.
-            2.  So sánh hành động đó với tiêu chuẩn CPR lý tưởng.
-            3.  Giải thích ngắn gọn lý do cho điểm (hoặc không cho điểm/trừ điểm) cho tiêu chí đó.
-                *Ví dụ cho một bước:* "CoT 2a - Vị trí đặt tay: Quan sát thấy người thực hiện đặt hai bàn tay chồng lên nhau ở giữa ngực nạn nhân. Vị trí này có vẻ hơi cao so với nửa dưới xương ức theo khuyến nghị. Do đó, tiêu chí này chưa hoàn toàn tối ưu."
+            You are a medical AI trained to evaluate first aid technique performance in videos.
+            Your task is to analyze a user's Adult CPR demonstration video step-by-step using Chain of Thought reasoning, compare each aspect against international first aid guidelines, and score each criterion accordingly.
+            Evaluate the following categories in sequence, and assign a score (with reasoning) to each sub-criterion based on the video.
+            Focus on chest compressions, rescue breaths, and cycle coordination.
+            Then output ONLY a valid JSON object — no explanation, no commentary. Make sure the output is strictly valid JSON format that can be parsed by any JSON parser.
 
-            **Tiêu chí đánh giá chi tiết (Dùng cho phân tích CoT):**
+            Categories and sub-criteria:
 
-            *   **1. Đánh giá ban đầu & Chuẩn bị (Tổng phụ: 10 điểm)**
-                *   (CoT 1a) Kiểm tra đáp ứng (lay gọi): (0-5 điểm)
-                *   (CoT 1b) Kiểm tra mạch cảnh & nhịp thở (trong 5-10 giây): (0-5 điểm)
-            *   **2. Ép tim ngoài lồng ngực (Tổng phụ: 55 điểm)**
-                *   (CoT 2a) Vị trí đặt tay (nửa dưới xương ức): (0-10 điểm)
-                *   (CoT 2b) Tư thế người cấp cứu (vai thẳng trên tay, khuỷu tay thẳng): (0-5 điểm)
-                *   (CoT 2c) Tần số ép tim (mục tiêu 100-120 lần/phút): (0-15 điểm)
-                *   (CoT 2d) Độ sâu ép tim (mục tiêu 5-6 cm): (0-20 điểm)
-                *   (CoT 2e) Để ngực nảy lên hoàn toàn (Chest Recoil): (0-5 điểm)
-            *   **3. Thông khí/Thổi ngạt (Tổng phụ: 20 điểm)**
-                *   (CoT 3a) Khai thông đường thở (ngửa đầu - nâng cằm): (0-5 điểm)
-                *   (CoT 3b) Kỹ thuật thổi ngạt (kín, bịt mũi, thời gian hợp lý): (0-5 điểm)
-                *   (CoT 3c) Hiệu quả thổi ngạt (lồng ngực nhô lên): (0-10 điểm)
-            *   **4. Chu kỳ & Tính liên tục (Tổng phụ: 15 điểm)**
-                *   (CoT 4a) Tỷ lệ ép tim/thổi ngạt (30:2): (0-10 điểm)
-                *   (CoT 4b) Giảm thiểu gián đoạn (<10 giây): (0-5 điểm)
+            1. Chest Compressions (Total – 60 points)
+              (CoT 1a) Rescuer Positioning – Kneels beside the casualty's chest. (0–5 points)
+              (CoT 1b) Hand Placement – Places the heel of one hand on the center of the chest (lower half of the sternum), with the heel of the other hand on top. (0–15 points)
+              (CoT 1c) Finger Interlocking & Position – Interlocks fingers and ensures they are kept off the casualty's chest/ribs. (0–5 points)
+              (CoT 1d) Body Mechanics & Arm Position – Leans directly over the casualty's chest with arms straight (elbows locked), using body weight for compressions. (0–10 points)
+              (CoT 1e) Compression Depth – Compresses the chest to a depth of 5 to 6 cm. (0–15 points)
+              (CoT 1f) Chest Recoil – Allows the chest to fully recoil between compressions without losing hand contact. (0–5 points)
+              (CoT 1g) Compression Rate – Delivers compressions at a rate of 100–120 per minute. (0–5 points)
 
-            **Output cuối cùng (Định dạng JSON có cấu trúc):**
-            Sau khi hoàn thành phân tích Chain of Thought ở trên, hãy cung cấp kết quả tổng hợp **CHỈ** dưới dạng JSON như sau.
-            *   `total_point`: Tổng điểm từ 0-100 dựa trên phân tích CoT.
-            *   `detailed_summary`: Một đối tượng JSON chứa các nhận xét chi tiết, bao gồm:
-                *   `score_breakdown`: Một đối tượng chứa điểm số (dưới dạng chuỗi "Điểm/Tổng") cho từng nhóm tiêu chí chính.
-                *   `strengths`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm mạnh chính dựa trên phân tích CoT.
-                *   `areas_for_improvement`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm yếu/cần cải thiện chính dựa trên phân tích CoT.
+            2. Rescue Breaths (Total – 30 points)
+              *Note: Score 0 if not performed; section may be marked N/A for compression-only CPR.*
+              (CoT 2a) Open Airway – Performs the head-tilt/chin-lift maneuver after 30 compressions. (0–10 points)
+              (CoT 2b) Nose Pinch – Pinches the casualty's nose closed before delivering breaths. (0–5 points)
+              (CoT 2c) Mouth Seal – Creates a proper seal over the casualty's mouth. (0–5 points)
+              (CoT 2d) Breath Delivery & Chest Rise – Delivers breaths resulting in visible chest rise. (0–10 points)
+
+            3. Cycle Coordination & Efficiency (Total – 10 points)
+              (CoT 3a) Correct Cycle Ratio – Performs 30 compressions followed by 2 breaths (if applicable). (0–5 points)
+              (CoT 3b) Minimize Interruptions – Keeps transitions quick and efficient. (0–5 points)
+
+            Output ONLY this format as valid JSON:
+            {{
+              "total_point": <total_score>,
+              "detailed_summary": {{
+                "score_breakdown": {{
+                  "Chest Compressions": "<x>/60",
+                  "Rescue Breaths": "<x>/30",
+                  "Cycle Coordination & Efficiency": "<x>/10"
+                }},
+                "strengths": [
+                  // list of well-performed areas with reasoning
+                ],
+                "areas_for_improvement": [
+                  // list of specific feedback points or missing/incorrect actions
+                ]
+              }}
+            }}
             """,
             "heimlich": """
-            Đây là video thực hiện động tác {movement_name}, đưa ra tổng điểm ?/100.
-            Phân tích Chain of Thought (Yêu cầu thực hiện trước khi xuất JSON):
-            Hãy trình bày quá trình suy luận của bạn theo từng bước, tương ứng với các tiêu chí đánh giá dưới đây. Với mỗi tiêu chí:
-            1.  Mô tả ngắn gọn hành động quan sát được trong video liên quan đến tiêu chí đó.
-            2.  So sánh hành động đó với tiêu chuẩn Heimlich lý tưởng.
-            3.  Giải thích ngắn gọn lý do cho điểm (hoặc không cho điểm/trừ điểm) cho tiêu chí đó.
-                *Ví dụ cho một bước:* "CoT 3b - Vị trí đặt tay: Quan sát thấy người thực hiện đặt nắm đấm ngay dưới xương sườn của nạn nhân. Vị trí này hơi cao so với hướng dẫn là 'trên rốn, dưới mũi ức'. Do đó, tiêu chí này chưa hoàn toàn chính xác theo video tham chiếu, trừ 5 điểm."
-            **Tiêu chí đánh giá chi tiết (Dùng cho phân tích CoT):**
+            You are a medical AI trained to evaluate Heimlich maneuver performance in videos.
+            Your task is to analyze a user's Heimlich technique demonstration video step-by-step using Chain of Thought reasoning, compare each aspect against international first aid guidelines for choking response, and score each criterion accordingly.
+            Evaluate the following categories in sequence, and assign a score (with reasoning) to each sub-criterion based on the video.
+            Focus on the practical technique of the Heimlich maneuver — including back blows, abdominal thrusts, and correct cycle management.
+            Then output ONLY a valid JSON object — no explanation, no commentary. Make sure the output is strictly valid JSON format that can be parsed by any JSON parser.
 
-            *   **1. Nhận Biết Tình Huống (Tổng phụ: 20 điểm)**
-                *   (CoT 1a) Có biểu hiện nhận biết/phân biệt được mức độ tắc nghẽn (một phần/hoàn toàn) không?: (0-10 điểm)
-                *   (CoT 1b) Có biểu hiện nhận biết được các dấu hiệu tắc nghẽn (ôm cổ, khó thở...) không?: (0-10 điểm)
-            *   **2. Xử Lý Tắc Nghẽn Một Phần (Nếu tình huống là tắc nghẽn một phần) (Tổng phụ: 20 điểm)**
-                *   (CoT 2a) Có khuyến khích ho mạnh & hướng dẫn cúi người không?: (0-10 điểm)
-                *   (CoT 2b) Có thực hiện vỗ lưng đúng vị trí (giữa 2 bả vai) như video tham chiếu không?: (0-10 điểm)
-            *   **3. Kỹ Thuật Heimlich (Nếu tình huống là tắc nghẽn hoàn toàn) (Tổng phụ: 60 điểm)**
-                *   (CoT 3a) Tư thế người sơ cứu (đứng sau, vững chắc) có đúng không?: (0-10 điểm)
-                *   (CoT 3b) Vị trí đặt tay (nắm đấm trên rốn, dưới mũi ức) có chính xác không?: (0-25 điểm)
-                *   (CoT 3c) Kỹ thuật đẩy bụng (vào trong & lên trên, mạnh, dứt khoát, lặp lại) có đúng không?: (0-25 điểm)
+            Categories and sub-criteria:
 
-            **Output cuối cùng (Định dạng JSON có cấu trúc):**
-            Sau khi hoàn thành phân tích Chain of Thought ở trên, hãy cung cấp kết quả tổng hợp **CHỈ** dưới dạng JSON như sau.
-            *   `total_point`: Tổng điểm từ 0-100 dựa trên phân tích CoT.
-            *   `detailed_summary`: Một đối tượng JSON chứa các nhận xét chi tiết, bao gồm:
-                *   `score_breakdown`: Một đối tượng chứa điểm số (dưới dạng chuỗi "Điểm/Tổng") cho từng nhóm tiêu chí chính **đã được đánh giá** (Không bao gồm tiêu chí Gọi Hỗ Trợ). Ví dụ: "nhan_biet_tinh_huong": "18/20".
-                *   `strengths`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm mạnh chính quan sát được, so với video tham chiếu.
-                *   `areas_for_improvement`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm yếu/cần cải thiện chính quan sát được, so với video tham chiếu.
+            1. Back Blow Technique ("Slap it out") (Total: 45 points)
+              (CoT 1a) Casualty Positioning — Rescuer supports the casualty's chest with one hand and leans the casualty sufficiently forward. (0–15 points)
+              (CoT 1b) Rescuer Stance — Stands to the side and slightly behind the casualty. (0–5 points)
+              (CoT 1c) Hand Placement & Target Area — Uses the heel of the hand to strike the area between the casualty's shoulder blades. (0–15 points)
+              (CoT 1d) Blow Delivery — Delivers sharp, distinct back blows (up to 5). (0–10 points)
+
+            2. Abdominal Thrust Technique ("Squeeze it out") (Total: 45 points)
+              (CoT 2a) Rescuer Stance — Stands behind the casualty. (0–5 points)
+              (CoT 2b) Arm Placement — Places both arms around the casualty's upper abdomen/waist. (0–10 points)
+              (CoT 2c) Hand Placement & Grip — Clenches one fist and places it between the navel (belly button) and the bottom of the sternum (breastbone). Grasps the fist firmly with the other hand. (0–15 points)
+              (CoT 2d) Thrust Action & Direction — Pulls sharply inwards and upwards with distinct thrusts (up to 5 times). (0–15 points)
+
+            3. Cycle Management & Technique Transition (Total: 10 points)
+              (CoT 3a) Correct Cycle Execution — Continuously alternates between up to 5 back blows and up to 5 abdominal thrusts until the obstruction is cleared (or as per scenario). (0–5 points)
+              (CoT 3b) Brief Mouth Check — Performs a quick visual check inside the casualty's mouth after each set of back blows AND each set of abdominal thrusts to look for the obstruction. (0–5 points)
+
+            Output ONLY this format as valid JSON:
+            {{
+              "total_point": <total_score>,
+              "detailed_summary": {{
+                "score_breakdown": {{
+                  "Back Blow Technique": "<x>/45",
+                  "Abdominal Thrust Technique": "<x>/45",
+                  "Cycle Management & Technique Transition": "<x>/10"
+                }},
+                "strengths": [
+                  // list of well-performed areas with reasoning
+                ],
+                "areas_for_improvement": [
+                  // list of specific feedback points or missing/incorrect actions
+                ]
+              }}
+            }}
             """,
             "recovery": """
-            Đây là video thực hiện động tác {movement_name}, đưa ra tổng điểm ?/100.
+            You are a medical AI trained to evaluate Recovery Position technique performance in videos.
+            Your task is to analyze a user's demonstration of the Recovery Position step-by-step using Chain of Thought reasoning, compare each aspect against international first aid guidelines, and score each criterion accordingly.
+            Evaluate the following categories in sequence, and assign a score (with reasoning) to each sub-criterion based on the video.
+            Focus on the practical technique of the Recovery Position — including initial limb setup, rolling motion, and airway maintenance.
+            Then output ONLY a valid JSON object — no explanation, no commentary. Make sure the output is strictly valid JSON format that can be parsed by any JSON parser.
 
-            Phân tích Chain of Thought (Yêu cầu thực hiện trước khi xuất JSON):
-            Hãy trình bày quá trình suy luận của bạn theo từng bước, tương ứng với các tiêu chí đánh giá dưới đây. Với mỗi tiêu chí:
-            1.  Mô tả ngắn gọn hành động quan sát được trong video liên quan đến tiêu chí đó.
-            2.  So sánh hành động đó với tiêu chuẩn thực hiện "Tư thế hồi sức" lý tưởng.
-            3.  Giải thích ngắn gọn lý do cho điểm (hoặc không cho điểm/trừ điểm) cho tiêu chí đó.
-                *Ví dụ cho một bước:* "CoT 2a - Đặt tay gần vuông góc: Quan sát thấy người thực hiện nâng tay gần của nạn nhân lên, khuỷu tay gập, tạo thành một góc khoảng 80 độ so với thân mình. Tiêu chuẩn là khoảng 90 độ. Do gần đạt chuẩn và thao tác đúng nên cho điểm cao, nhưng có thể trừ nhẹ vì chưa hoàn toàn vuông góc."
+            Categories and sub-criteria:
 
-            **Tiêu chí đánh giá chi tiết (Dùng cho phân tích CoT - ĐÃ ĐIỀU CHỈNH CHO TƯ THẾ HỒI SỨC):**
+            1. Initial Setup & Limb Positioning (Total - 40 points)
+              (CoT 1a) Rescuer Position - Kneels correctly beside the casualty. (0–5 points)
+              (CoT 1b) Casualty Leg Check - Ensures both casualty's legs are initially straight. (0–5 points)
+              (CoT 1c) Near Arm Placement - Places the casualty's near arm at a right angle, elbow bent, palm up. (0–15 points)
+              (CoT 1d) Far Arm Placement - Brings far arm across chest, back of hand against cheek, holds in place. (0–15 points)
 
-            *   **1. Chuẩn bị & Thiết lập ban đầu (Tổng phụ: 10 điểm)**
-                *   (CoT 1a) Tiếp cận và Quỳ đúng vị trí (bên cạnh nạn nhân): (0-5 điểm)
-                *   (CoT 1b) Thao tác ban đầu mạch lạc, không lúng túng: (0-5 điểm)
-            *   **2. Định vị Tay & Chân Nạn nhân (Tổng phụ: 45 điểm)**
-                *   (CoT 2a) Đặt tay gần vuông góc (đúng góc 90 độ, lòng bàn tay ngửa): (0-15 điểm)
-                *   (CoT 2b) Đặt tay xa áp má (mu bàn tay áp má đối diện, giữ tay): (0-15 điểm)
-                *   (CoT 2c) Co chân xa (gối co lên, bàn chân đặt phẳng sàn): (0-15 điểm)
-            *   **3. Thao tác Lăn & Điều chỉnh tư thế (Tổng phụ: 35 điểm)**
-                *   (CoT 3a) Kỹ thuật lăn (dùng gối kéo, nhẹ nhàng, có kiểm soát): (0-15 điểm)
-                *   (CoT 3b) Điều chỉnh Ngửa đầu - Nâng cằm (QUAN TRỌNG NHẤT - đảm bảo đường thở): (0-15 điểm)
-                *   (CoT 3c) Ổn định tư thế cuối (nằm nghiêng, chân trên gập 90 độ): (0-5 điểm)
-            *   **4. Tính Tuần tự & An toàn chung (Tổng phụ: 10 điểm)**
-                *   (CoT 4a) Thực hiện đúng trình tự các bước: (0-5 điểm)
-                *   (CoT 4b) Thao tác chung nhẹ nhàng, an toàn cho nạn nhân: (0-5 điểm)
+            2. Rolling the Casualty (Total - 35 points)
+              (CoT 2a) Far Leg Preparation - Bends the casualty's far knee, foot flat on the floor. (0–10 points)
+              (CoT 2b) Rolling Technique - Maintains hand against cheek while pulling on knee to roll casualty smoothly. (0–25 points)
 
-            **Output cuối cùng (Định dạng JSON có cấu trúc):**
-            Sau khi hoàn thành phân tích Chain of Thought ở trên, hãy cung cấp kết quả tổng hợp **CHỈ** dưới dạng JSON như sau.
-            *   `total_point`: Tổng điểm từ 0-100 dựa trên phân tích CoT.
-            *   `detailed_summary`: Một đối tượng JSON chứa các nhận xét chi tiết, bao gồm:
-                *   `score_breakdown`: Một đối tượng chứa điểm số (dưới dạng chuỗi "Điểm/Tổng") cho từng nhóm tiêu chí chính (ví dụ: "initial_setup", "limb_positioning", "rolling_adjustment", "overall_quality").
-                *   `strengths`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm mạnh chính dựa trên phân tích CoT.
-                *   `areas_for_improvement`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm yếu/cần cải thiện chính dựa trên phân tích CoT.
+            3. Final Adjustments & Airway Maintenance (Total - 25 points)
+              (CoT 3a) Top Leg Position - Adjusts top leg to rest in a stable L-shape. (0–10 points)
+              (CoT 3b) Head Tilt & Airway - Performs slight head tilt to ensure airway is open. (0–10 points)
+              (CoT 3c) Final Hand/Cheek Check - Confirms hand position supports head and airway. (0–5 points)
+
+            Output ONLY this format as valid JSON:
+            {{
+              "total_point": <total_score>,
+              "detailed_summary": {{
+                "score_breakdown": {{
+                  "Initial Setup & Limb Positioning": "<x>/40",
+                  "Rolling the Casualty": "<x>/35",
+                  "Final Adjustments & Airway Maintenance": "<x>/25"
+                }},
+                "strengths": [
+                  // list of well-performed areas with reasoning
+                ],
+                "areas_for_improvement": [
+                  // list of specific feedback points or missing/incorrect actions
+                ]
+              }}
+            }}
             """,
             "nosebleed": """
-            Đây là video thực hiện động tác {movement_name}, đưa ra tổng điểm ?/100.
+            You are a medical AI trained to evaluate first aid technique performance in videos.
+            Your task is to analyze a user's Nosebleed First Aid demonstration video step-by-step using Chain of Thought reasoning, compare each aspect against international first aid guidelines, and score each criterion accordingly.
+            Evaluate the following categories in sequence, and assign a score (with reasoning) to each sub-criterion based on the video.
+            Focus on casualty positioning, bleeding control, and follow-up management. 
+            Then output ONLY a valid JSON object — no explanation, no commentary. Make sure the output is strictly valid JSON format that can be parsed by any JSON parser.
 
-            Phân tích Chain of Thought (Yêu cầu thực hiện trước khi xuất JSON):
-            Hãy trình bày quá trình suy luận của bạn theo từng bước, tương ứng với các tiêu chí đánh giá dưới đây. Với mỗi tiêu chí:
-            1.  Mô tả ngắn gọn hành động quan sát được trong video liên quan đến tiêu chí đó.
-            2.  So sánh hành động đó với tiêu chuẩn sơ cứu chảy máu cam lý tưởng.
-            3.  Giải thích ngắn gọn lý do cho điểm (hoặc không cho điểm/trừ điểm) cho tiêu chí đó.
-            Ví dụ cho một bước: "CoT 2a - Vị trí ép: Quan sát thấy người thực hiện dùng hai ngón tay bóp vào phần cánh mũi mềm của nạn nhân. Vị trí này chính xác theo khuyến nghị sơ cứu. Do đó, tiêu chí này đạt điểm tối đa."
+            Categories and sub-criteria:
 
-            **Tiêu chí đánh giá chi tiết (Dùng cho phân tích CoT):**
+            1. Casualty Positioning & Airway Management (Total - 45 points)
+              (CoT 1a) Initial Positioning - Sitting - Ensures the casualty is sitting down, not lying down. (0–15 points)
+              (CoT 1b) Correct Posture - Leaning Forward - Ensures the casualty leans their head and upper body forward. (0–20 points)
+              (CoT 1c) Breathing Instruction - Instructs the casualty to breathe through their mouth. (0–10 points)
 
-            *   **1. Tư thế nạn nhân (Tổng phụ: 35 điểm)**
-                *   (CoT 1a) Tư thế ngồi: Hướng dẫn/để nạn nhân ngồi thẳng, không nằm. (0-10 điểm)
-                *   (CoT 1b) Nghiêng người về phía trước: Hướng dẫn/để nạn nhân nghiêng/cúi đầu và thân người về phía trước (tránh ngửa ra sau). (0-25 điểm)
-            *   **2. Kỹ thuật cầm máu (Tổng phụ: 50 điểm)**
-                *   (CoT 2a) Vị trí ép: Dùng ngón tay (thường là ngón cái và ngón trỏ) bóp chặt vào phần **cánh mũi mềm** (phần chóp mũi, dưới xương sống mũi), không phải phần xương cứng. (0-25 điểm)
-                *   (CoT 2b) Lực ép và duy trì: Bóp đủ mạnh và **giữ liên tục**, không thả ra kiểm tra thường xuyên. (0-15 điểm)
-                *   (CoT 2c) Hướng dẫn thở: Khuyên nạn nhân thở bằng miệng trong khi mũi đang bị bóp. (0-10 điểm)
-            *   **3. Duy trì và Theo dõi (Tổng phụ: 15 điểm)**
-                *   (CoT 3a) Duy trì tư thế ép: Giữ vững thao tác bóp mũi và tư thế nghiêng người về phía trước một cách ổn định trong suốt thời gian thực hiện được quay trong video. (0-15 điểm)
-            *   **(Implicit) 4. Tránh các hành động sai (Được đánh giá lồng ghép trong các tiêu chí trên)**
-                *   *(Không ngửa mặt/đầu ra sau - nằm trong CoT 1b)*
-                *   *(Không nằm xuống - nằm trong CoT 1a)*
-                *   *(Không nhét vật lạ (bông, giấy) sâu vào mũi - không phải là hành động trực tiếp cần thực hiện, nhưng nếu video có cảnh báo thì ghi nhận)*
+            2. Bleeding Control Technique (Total - 40 points)
+              (CoT 2a) Hand Placement - Pinching Soft Part - Correctly identifies and pinches the soft part of the nose. (0–25 points)
+              (CoT 2b) Application of Pressure - Continuous - Maintains firm and continuous pressure without releasing. (0–15 points)
 
-            **Output cuối cùng (Định dạng JSON có cấu trúc):**
-            Sau khi hoàn thành phân tích Chain of Thought ở trên, hãy cung cấp kết quả tổng hợp **CHỈ** dưới dạng JSON như sau.
-            *   `total_point`: Tổng điểm từ 0-100 dựa trên phân tích CoT.
-            *   `detailed_summary`: Một đối tượng JSON chứa các nhận xét chi tiết, bao gồm:
-                *   `score_breakdown`: Một đối tượng chứa điểm số (dưới dạng chuỗi "Điểm/Tổng") cho từng nhóm tiêu chí chính (Tư thế, Kỹ thuật, Duy trì).
-                *   `strengths`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm mạnh chính dựa trên phân tích CoT.
-                *   `areas_for_improvement`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm yếu/cần cải thiện chính dựa trên phân tích CoT.
+            3. Management, Duration & Assessment (Total - 15 points)
+              (CoT 3a) Duration - Initial Hold - Maintains pressure for 10 minutes. (0–5 points)
+              (CoT 3b) Assessment - Releasing Pressure - Releases after 10 minutes to assess bleeding. (0–5 points)
+              (CoT 3c) Reapplication If Necessary - Reapplies correct technique if bleeding continues. (0–5 points)
+
+            Output ONLY this format as valid JSON:
+            {{
+              "total_point": <total_score>,
+              "detailed_summary": {{
+                "score_breakdown": {{
+                  "Casualty Positioning & Airway Management": "<x>/45",
+                  "Bleeding Control Technique": "<x>/40",
+                  "Management, Duration & Assessment": "<x>/15"
+                }},
+                "strengths": [
+                  // list of well-executed actions with reasoning
+                ],
+                "areas_for_improvement": [
+                  // list of specific feedback points or missing/incorrect actions
+                ]
+              }}
+            }}
             """,
             "shock": """
-            Đây là video thực hiện động tác {movement_name}, đưa ra tổng điểm ?/100.
+            You are a medical AI trained to evaluate first aid technique performance in videos.
+            Your task is to analyze a user's Shock First Aid demonstration video step-by-step using Chain of Thought reasoning, compare each aspect against international first aid guidelines, and score each criterion accordingly.
+            Evaluate the following categories in sequence, and assign a score (with reasoning) to each sub-criterion based on the video.
+            Focus on casualty positioning, limb elevation, clothing adjustment, and warmth provision.
+            Then output ONLY a valid JSON object — no explanation, no commentary. Make sure the output is strictly valid JSON format that can be parsed by any JSON parser.
 
-            Phân tích Chain of Thought (Yêu cầu thực hiện trước khi xuất JSON):
-            Hãy trình bày quá trình suy luận của bạn theo từng bước, tương ứng với các tiêu chí đánh giá dưới đây. Với mỗi tiêu chí:
-            1.  Mô tả ngắn gọn hành động quan sát được trong video liên quan đến tiêu chí đó.
-            2.  So sánh hành động đó với tiêu chuẩn sơ cứu choáng ngất lý tưởng.
-            3.  Giải thích ngắn gọn lý do cho điểm (hoặc không cho điểm/trừ điểm) cho tiêu chí đó.
-            Ví dụ cho một bước: "CoT 1b - Nâng cao chân: Quan sát thấy người thực hiện đặt chân nạn nhân lên một chiếc ghế, đảm bảo chân cao hơn rõ rệt so với đầu. Hành động này đúng theo khuyến nghị để tăng lưu lượng máu lên não. Do đó, tiêu chí này đạt điểm tối đa."
+            Categories and sub-criteria:
 
-            **Tiêu chí đánh giá chi tiết (Dùng cho phân tích CoT):**
+            1. Casualty Positioning (Total - 65 points)
+              (CoT 1a) Lie Casualty Down - Assists casualty into a flat, supine position. (0–20 points)
+              (CoT 1b) Use Underlying Insulation - Ensures casualty is on an insulating layer (blanket, mat, etc). (0–5 points)
+              (CoT 1c) Elevate Legs Correctly - Raises both legs above heart level using stable support. (0–40 points)
 
-            *   **1. Tư thế nạn nhân (Tổng phụ: 35 điểm)**
-                *   (CoT 1a) Đặt nạn nhân nằm: Nhanh chóng đặt nạn nhân nằm ngửa trên mặt phẳng an toàn. (0-5 điểm)
-                *   (CoT 1b) Nâng cao chân: Nâng hai chân của nạn nhân lên cao hơn đầu một cách rõ rệt (ví dụ: kê lên ghế, vật dụng hoặc người khác giữ). (0-30 điểm)
-            *   **2. Hành động hỗ trợ ban đầu (Tổng phụ: 50 điểm)**
-                *   (CoT 2a) Nới lỏng quần áo: Kiểm tra và chủ động nới lỏng quần áo bó sát (cổ áo, thắt lưng...). (0-15 điểm)
-                *   (CoT 2b) Đảm bảo đường thở (Xoay đầu): Đặt đầu nạn nhân nghiêng sang một bên để tránh tụt lưỡi hoặc hít sặc. (0-25 điểm)
-                *   (CoT 2c) Đánh giá & Giữ ấm (Nếu cần): Đánh giá sơ bộ thân nhiệt và đắp chăn/áo mỏng nếu nạn nhân có vẻ lạnh. (0-10 điểm)
-            *   **3. Theo dõi và Kích thích(Tổng phụ: 15 điểm)**
-                *   (CoT 3a) Mô phỏng Theo dõi & Kích thích hồi tỉnh: Thực hiện các hành động mô phỏng việc theo dõi (nhìn vào mặt, ngực nạn nhân) VÀ kích thích nhẹ nhàng (gọi tên giả định, vỗ nhẹ má, dùng tay mô phỏng lau mặt...). (0-15 điểm)
-            *   **(Implicit) 4. Tránh các hành động sai (Được đánh giá lồng ghép trong các tiêu chí trên)**
-                *   *(Không đỡ nạn nhân ngồi dậy quá sớm)*
-                *   *(Không cho ăn/uống khi nạn nhân chưa hoàn toàn tỉnh táo)*
-                *   *(Không tụ tập quá đông xung quanh - nằm trong CoT 3a)*
+            2. Casualty Care (Demonstrated Actions) (Total - 35 points)
+              (CoT 2a) Loosen Tight Clothing - Loosens clothing at neck, chest, and waist. (0–15 points)
+              (CoT 2b) Provide Warmth (Covering) - Covers casualty with blanket/coat to preserve body heat. (0–20 points)
 
-            **Output cuối cùng (Định dạng JSON có cấu trúc):**
-            Sau khi hoàn thành phân tích Chain of Thought ở trên, hãy cung cấp kết quả tổng hợp **CHỈ** dưới dạng JSON như sau.
-            *   `total_point`: Tổng điểm từ 0-100 dựa trên phân tích CoT.
-            *   `detailed_summary`: Một đối tượng JSON chứa các nhận xét chi tiết, bao gồm:
-                *   `score_breakdown`: Một đối tượng chứa điểm số (dưới dạng chuỗi "Điểm/Tổng") cho từng nhóm tiêu chí chính ("positioning": Tư thế, "initial_actions": Hành động hỗ trợ, "monitoring_follow_up": Theo dõi/Xử lý).
-                *   `strengths`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm mạnh chính dựa trên phân tích CoT.
-                *   `areas_for_improvement`: Một mảng (array) các chuỗi (string), mỗi chuỗi mô tả một điểm yếu/cần cải thiện chính dựa trên phân tích CoT.
+            Output ONLY this format as valid JSON:
+            {{
+              "total_point": <total_score>,
+              "detailed_summary": {{
+                "score_breakdown": {{
+                  "Casualty Positioning": "<x>/65",
+                  "Casualty Care": "<x>/35"
+                }},
+                "strengths": [
+                  // list of well-executed actions with reasoning
+                ],
+                "areas_for_improvement": [
+                  // list of specific feedback points or missing/incorrect actions
+                ]
+              }}
+            }}
             """,
             # Default prompt for other movements
             "default": """
-            This video is about {movement_name} movement, rate this video point out of 100, ?/100
-            "Comment" on this movement. Comment is in general about the movement,
-            "Detail" is rating in detailed about the good and bad part of the movement things to improve why the score is ?/100 
+            You are a medical AI trained to evaluate first aid technique performance in videos.
+            Your task is to analyze the demonstrated {movement_name} technique in this video against best practice standards.
+
+            Evaluate the movement critically, considering:
+            - Correct body positioning and alignment
+            - Proper technique execution
+            - Effectiveness of the movement
+            - Safety considerations
+
+            Score the performance on a scale of 0-100, where 100 represents perfect execution according to first aid guidelines.
+
             IMPORTANT: Respond ONLY in JSON format like this example:
             {{
                 "total_point": 85,
                 "detailed_summary": {{
-                    "comment": "The movement is very good overall!",
-                    "strengths": ["Good form", "Proper execution"],
-                    "areas_for_improvement": ["Could improve timing", "Better posture needed"]
+                    "comment": "The movement was generally well-executed",
+                    "strengths": ["Good body positioning", "Proper hand placement", "Effective pressure application"],
+                    "areas_for_improvement": ["Could improve timing", "Ensure consistent technique throughout"]
                 }}
             }}
             """,
